@@ -35,7 +35,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          VERSION=$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); const base = pkg.version.split('-')[0]; const [major, minor, patch] = base.split('.').map(Number); const stamped = `${major}.${minor}.${patch + 1}-latest.${process.env.GITHUB_RUN_NUMBER}`; pkg.version = stamped; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n'); process.stdout.write(stamped);")
+          VERSION=$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); const base = pkg.version.split('-')[0]; const parts = base.split('.').map(Number); const stamped = parts[0] + '.' + parts[1] + '.' + (parts[2] + 1) + '-latest.' + process.env.GITHUB_RUN_NUMBER; pkg.version = stamped; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n'); process.stdout.write(stamped);")
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Package latest VSIX
