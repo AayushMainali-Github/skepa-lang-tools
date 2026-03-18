@@ -38,6 +38,7 @@
     "vscode:prepublish": "npm run compile",
     "package:vsix": "npm run compile && npm exec --yes @vscode/vsce -- package",
     "package:vsix:file": "npm run compile && npm exec --yes @vscode/vsce -- package --out skepa-tools.vsix",
+    "verify:vsix:file": "py scripts/verify_vsix.py skepa-tools.vsix",
     "publish:marketplace": "npm run compile && npm exec --yes @vscode/vsce -- publish"
   },
   "dependencies": {
