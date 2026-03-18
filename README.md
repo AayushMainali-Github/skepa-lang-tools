@@ -56,7 +56,9 @@ Users can install it in VS Code like this:
 5. Choose `Install from VSIX...`.
 6. Select the downloaded file.
 
-After install, users may also need either:
+## User Requirements
+
+After install, diagnostics only work if users have one of these set up:
 
 - `skepac` available on `PATH`, or
 - the `skepa.sourceRepoPath` setting pointing at a local `skepa-lang` repo
@@ -68,6 +70,8 @@ Example:
   "skepa.sourceRepoPath": "D:/Skepa/skepa-lang"
 }
 ```
+
+Without one of those, the extension can still provide editor features like highlighting, hover, and completions, but compiler-backed diagnostics will not run.
 
 ## Package A VSIX
 
@@ -121,6 +125,11 @@ When you want one-click install from the Visual Studio Marketplace later:
 ```powershell
 npm run publish:marketplace
 ```
+
+## Maintainer Notes
+
+- `vsce` packaging currently succeeds without a license file, but it warns if `LICENSE`, `LICENSE.md`, or `LICENSE.txt` is missing.
+- Adding a real license file is a good next cleanup before broader distribution.
 
 ## CLI Resolution
 
