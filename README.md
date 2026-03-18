@@ -18,6 +18,8 @@ This repo contains:
 - hover help for core language items
 - go to definition
 - find references
+- rename symbol
+- signature help for function and method calls
 - document highlights
 - document symbols
 - workspace symbols

@@ -13,9 +13,12 @@ import {
   InitializeParams,
   InitializeResult,
   MarkupKind,
+  PrepareRenameParams,
   Position,
   ProposedFeatures,
+  RenameParams,
   SemanticTokens,
+  SignatureHelp,
   TextDocumentSyncKind,
   TextDocuments,
   WorkspaceSymbol,
@@ -83,6 +86,13 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       documentSymbolProvider: true,
       workspaceSymbolProvider: true,
       codeActionProvider: true,
+      renameProvider: {
+        prepareProvider: true,
+      },
+      signatureHelpProvider: {
+        triggerCharacters: ["(", ","],
+        retriggerCharacters: [","],
+      },
       semanticTokensProvider: {
         legend: getSemanticTokenLegend(),
         full: true,
@@ -174,6 +184,11 @@ connection.onReferences((params) => workspaceIndex.findReferences(params));
 connection.onDocumentHighlight((params) => workspaceIndex.findDocumentHighlights(params));
 connection.onDocumentSymbol((params): DocumentSymbol[] => workspaceIndex.getDocumentSymbols(params.textDocument.uri));
 connection.onWorkspaceSymbol((params): WorkspaceSymbol[] => workspaceIndex.searchWorkspaceSymbols(params.query));
+connection.onPrepareRename((params: PrepareRenameParams) => workspaceIndex.prepareRename(params));
+connection.onRenameRequest((params: RenameParams) => workspaceIndex.renameSymbol(params));
+connection.onSignatureHelp((params): SignatureHelp | null => {
+  return workspaceIndex.buildSignatureHelp(params.textDocument.uri, params.position);
+});
 connection.onCodeAction((params: CodeActionParams): CodeAction[] => {
   return workspaceIndex.buildCodeActions(params.textDocument.uri, params.context.diagnostics);
 });

@@ -11,14 +11,20 @@ import {
   DocumentSymbol,
   Diagnostic,
   Location,
+  ParameterInformation,
   Position,
+  PrepareRenameParams,
   Range,
   ReferenceParams,
+  RenameParams,
   SemanticTokens,
   SemanticTokensBuilder,
+  SignatureHelp,
+  SignatureInformation,
   SymbolKind,
   TextDocumentPositionParams,
   TextEdit,
+  WorkspaceEdit,
   WorkspaceSymbol,
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -548,6 +554,98 @@ export class WorkspaceIndex {
     return actions;
   }
 
+  public prepareRename(params: PrepareRenameParams): Range | null {
+    const parsed = this.documents.get(params.textDocument.uri);
+    if (!parsed) {
+      return null;
+    }
+
+    const word = getWordAtPositionFromText(parsed.source, params.position);
+    if (!word || KEYWORDS.some((keyword) => keyword.label === word) || getBuiltinPackage(word)) {
+      return null;
+    }
+
+    const symbol = this.findDefinitionCandidates(word, params.textDocument.uri, params.position)[0];
+    if (!symbol || !isRenameSafe(symbol)) {
+      return null;
+    }
+
+    return symbol.selectionRange;
+  }
+
+  public renameSymbol(params: RenameParams): WorkspaceEdit | null {
+    const parsed = this.documents.get(params.textDocument.uri);
+    if (!parsed) {
+      return null;
+    }
+
+    const word = getWordAtPositionFromText(parsed.source, params.position);
+    if (!word || !isValidIdentifier(params.newName)) {
+      return null;
+    }
+
+    const symbol = this.findDefinitionCandidates(word, params.textDocument.uri, params.position)[0];
+    if (!symbol || !isRenameSafe(symbol)) {
+      return null;
+    }
+
+    const includeWorkspace = symbol.topLevel && this.countTopLevelDefinitions(symbol.name) === 1;
+    const uris = includeWorkspace ? [...this.documents.keys()] : [symbol.uri];
+    const changes: Record<string, TextEdit[]> = {};
+
+    for (const uri of uris) {
+      const candidateDocument = this.documents.get(uri);
+      if (!candidateDocument) {
+        continue;
+      }
+
+      const ranges = this.findReferenceRangesForSymbol(candidateDocument, symbol);
+      if (ranges.length === 0) {
+        continue;
+      }
+
+      changes[uri] = ranges.map((range) => ({
+        range,
+        newText: params.newName,
+      }));
+    }
+
+    return Object.keys(changes).length > 0 ? { changes } : null;
+  }
+
+  public buildSignatureHelp(uri: string, position: Position): SignatureHelp | null {
+    const parsed = this.documents.get(uri);
+    if (!parsed) {
+      return null;
+    }
+
+    const callContext = getCallContext(parsed.source, position);
+    if (!callContext) {
+      return null;
+    }
+
+    const signatures = this.findSignatureCandidates(parsed, callContext);
+    if (signatures.length === 0) {
+      return null;
+    }
+
+    const activeSignature = 0;
+    const activeSignatureInfo = signatures[activeSignature];
+    const signatureParameters = activeSignatureInfo.parameters ?? [];
+    const activeParameter = Math.min(
+      signatureParameters.length > 0
+        ? signatureParameters.length - 1
+        : 0,
+      callContext.argumentIndex,
+    );
+
+    return {
+      signatures,
+      activeSignature,
+      activeParameter,
+    };
+  }
+
   private findDefinitionCandidates(name: string, uri: string, position: Position): ParsedSymbol[] {
     const parsed = this.documents.get(uri);
     if (!parsed) {
@@ -690,6 +788,35 @@ export class WorkspaceIndex {
     }
 
     return [...items.values()];
+  }
+
+  private findSignatureCandidates(
+    parsed: ParsedDocument,
+    callContext: { calleeText: string; calleePosition: Position; argumentIndex: number },
+  ): SignatureInformation[] {
+    const dotIndex = callContext.calleeText.indexOf(".");
+    if (dotIndex >= 0) {
+      const receiverName = callContext.calleeText.slice(0, dotIndex);
+      const memberName = callContext.calleeText.slice(dotIndex + 1);
+
+      const builtinMember = getBuiltinMember(receiverName, memberName);
+      if (builtinMember) {
+        return [createSignatureInformation(builtinMember.signature)];
+      }
+
+      const receiverType = this.resolveReceiverType(parsed, callContext.calleePosition, receiverName);
+      if (!receiverType) {
+        return [];
+      }
+
+      return this.findMembersForType(receiverType)
+        .filter((symbol) => symbol.name === memberName && symbol.kind === SymbolKind.Method)
+        .map((symbol) => createSignatureInformation(signatureLabelForSymbol(symbol), true));
+    }
+
+    return this.findDefinitionCandidates(callContext.calleeText, parsed.uri, callContext.calleePosition)
+      .filter((symbol) => symbol.kind === SymbolKind.Function)
+      .map((symbol) => createSignatureInformation(signatureLabelForSymbol(symbol)));
   }
 
   private resolveReceiverType(parsed: ParsedDocument, position: Position, receiverName: string): string | null {
@@ -1345,6 +1472,242 @@ export function getSemanticTokenLegend() {
 export function extractMissingImportPackage(message: string): string | null {
   const match = message.match(/`([A-Za-z_][A-Za-z0-9_]*)\.\*` used without `import \1;`/);
   return match?.[1] ?? null;
+}
+
+function isRenameSafe(symbol: ParsedSymbol): boolean {
+  if (symbol.kind === SymbolKind.Field || symbol.kind === SymbolKind.Method || symbol.kind === SymbolKind.Namespace) {
+    return false;
+  }
+
+  return symbol.kind === SymbolKind.Function
+    || symbol.kind === SymbolKind.Class
+    || symbol.kind === SymbolKind.Variable;
+}
+
+function isValidIdentifier(value: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value)
+    && !KEYWORDS.some((keyword) => keyword.label === value);
+}
+
+function signatureLabelForSymbol(symbol: ParsedSymbol): string {
+  const match = symbol.detail.match(/^(?:fn|method)\((.*)\)(?:\s*->\s*(.+))?$/);
+  if (!match) {
+    return symbol.name;
+  }
+
+  const parameters = splitParameterList(match[1] ?? "")
+    .filter((parameter) => parameter.trim() !== "self");
+  const returnType = match[2]?.trim();
+  const prefix = symbol.kind === SymbolKind.Method && symbol.containerName
+    ? `${symbol.containerName}.${symbol.name}`
+    : symbol.name;
+
+  return `${prefix}(${parameters.join(", ")})${returnType ? ` -> ${returnType}` : ""}`;
+}
+
+function createSignatureInformation(
+  label: string,
+  dropSelf = false,
+): SignatureInformation {
+  const parameters = extractParameterLabelsFromSignature(label, dropSelf).map((parameter) =>
+    ParameterInformation.create(parameter),
+  );
+
+  return SignatureInformation.create(label, undefined, ...parameters);
+}
+
+function extractParameterLabelsFromSignature(label: string, dropSelf = false): string[] {
+  const openParen = label.indexOf("(");
+  const closeParen = label.lastIndexOf(")");
+  if (openParen < 0 || closeParen < openParen) {
+    return [];
+  }
+
+  const raw = label.slice(openParen + 1, closeParen);
+  const parameters = splitParameterList(raw).map((parameter) => parameter.trim()).filter(Boolean);
+  if (!dropSelf) {
+    return parameters;
+  }
+
+  return parameters.filter((parameter) => parameter !== "self");
+}
+
+function splitParameterList(value: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  let parenDepth = 0;
+  let bracketDepth = 0;
+  let inString = false;
+  let escaping = false;
+
+  for (const char of value) {
+    if (escaping) {
+      current += char;
+      escaping = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      current += char;
+      escaping = true;
+      continue;
+    }
+
+    if (char === "\"") {
+      current += char;
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      current += char;
+      continue;
+    }
+
+    if (char === "(") {
+      parenDepth += 1;
+      current += char;
+      continue;
+    }
+
+    if (char === ")") {
+      parenDepth = Math.max(0, parenDepth - 1);
+      current += char;
+      continue;
+    }
+
+    if (char === "[") {
+      bracketDepth += 1;
+      current += char;
+      continue;
+    }
+
+    if (char === "]") {
+      bracketDepth = Math.max(0, bracketDepth - 1);
+      current += char;
+      continue;
+    }
+
+    if (char === "," && parenDepth === 0 && bracketDepth === 0) {
+      const trimmed = current.trim();
+      if (trimmed) {
+        parts.push(trimmed);
+      }
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  const trimmed = current.trim();
+  if (trimmed) {
+    parts.push(trimmed);
+  }
+
+  return parts;
+}
+
+function getCallContext(
+  source: string,
+  position: Position,
+): { calleeText: string; calleePosition: Position; argumentIndex: number } | null {
+  const offset = positionToOffset(source, position);
+  const stack: { openOffset: number; argumentIndex: number; calleeText: string | null }[] = [];
+  let inString = false;
+  let escaping = false;
+
+  for (let index = 0; index < offset; index += 1) {
+    const char = source[index];
+
+    if (escaping) {
+      escaping = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaping = true;
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      continue;
+    }
+
+    if (char === "(") {
+      stack.push({
+        openOffset: index,
+        argumentIndex: 0,
+        calleeText: extractCallCallee(source, index),
+      });
+      continue;
+    }
+
+    if (char === "," && stack.length > 0) {
+      stack[stack.length - 1].argumentIndex += 1;
+      continue;
+    }
+
+    if (char === ")" && stack.length > 0) {
+      stack.pop();
+    }
+  }
+
+  const activeCall = stack[stack.length - 1];
+  if (!activeCall?.calleeText) {
+    return null;
+  }
+
+  return {
+    calleeText: activeCall.calleeText,
+    calleePosition: offsetToPosition(source, activeCall.openOffset),
+    argumentIndex: activeCall.argumentIndex,
+  };
+}
+
+function extractCallCallee(source: string, openParenOffset: number): string | null {
+  let index = openParenOffset - 1;
+  while (index >= 0 && /\s/.test(source[index] ?? "")) {
+    index -= 1;
+  }
+
+  if (index < 0) {
+    return null;
+  }
+
+  let end = index + 1;
+  while (index >= 0 && /[A-Za-z0-9_.]/.test(source[index] ?? "")) {
+    index -= 1;
+  }
+
+  const callee = source.slice(index + 1, end).trim();
+  return /^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?$/.test(callee) ? callee : null;
+}
+
+function positionToOffset(source: string, position: Position): number {
+  const lines = source.split(/\r?\n/);
+  let offset = 0;
+
+  for (let lineIndex = 0; lineIndex < position.line; lineIndex += 1) {
+    offset += (lines[lineIndex] ?? "").length + 1;
+  }
+
+  return offset + position.character;
+}
+
+function offsetToPosition(source: string, offset: number): Position {
+  const safeOffset = Math.max(0, Math.min(offset, source.length));
+  const prefix = source.slice(0, safeOffset);
+  const lines = prefix.split(/\r?\n/);
+  const line = Math.max(0, lines.length - 1);
+  const character = lines[line]?.length ?? 0;
+
+  return { line, character };
 }
 
 function tokenTypeForSymbol(kind: SymbolKind, detail: string): number {
