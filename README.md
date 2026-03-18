@@ -114,6 +114,18 @@ That workflow will:
 - upload it as a workflow artifact
 - attach it to the GitHub release for that tag
 
+## Always-Latest VSIX
+
+This repo also includes a rolling latest-build workflow at [.github/workflows/latest-vsix.yml](./.github/workflows/latest-vsix.yml).
+
+Every push to `main` will:
+
+- compile the extension
+- build a fresh `skepa-tools-latest.vsix`
+- update a `latest` GitHub release
+
+That means users who want the newest private build can just download the asset from the `latest` release instead of waiting for a versioned tag.
+
 ## Marketplace Publishing
 
 When you want one-click install from the Visual Studio Marketplace later:
