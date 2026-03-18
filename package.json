@@ -30,7 +30,10 @@
     "compile:server": "tsc -p server",
     "watch:client": "tsc -w -p client",
     "watch:server": "tsc -w -p server",
-    "vscode:prepublish": "npm run compile"
+    "vscode:prepublish": "npm run compile",
+    "package:vsix": "npm run compile && npm exec --yes @vscode/vsce package",
+    "package:vsix:file": "npm run compile && npm exec --yes @vscode/vsce package --out skepa-tools.vsix",
+    "publish:marketplace": "npm run compile && npm exec --yes @vscode/vsce publish"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1",

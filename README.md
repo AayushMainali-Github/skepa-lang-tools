@@ -43,6 +43,85 @@ Run the extension in VS Code:
 2. Press `F5`.
 3. Open a `.sk` file in the Extension Development Host.
 
+## Install For Users
+
+The easiest way to share the extension right now is as a `.vsix` package.
+
+Users can install it in VS Code like this:
+
+1. Download the `.vsix` file from the latest GitHub release.
+2. Open VS Code.
+3. Go to `Extensions`.
+4. Open the `...` menu.
+5. Choose `Install from VSIX...`.
+6. Select the downloaded file.
+
+After install, users may also need either:
+
+- `skepac` available on `PATH`, or
+- the `skepa.sourceRepoPath` setting pointing at a local `skepa-lang` repo
+
+Example:
+
+```json
+{
+  "skepa.sourceRepoPath": "D:/Skepa/skepa-lang"
+}
+```
+
+## Package A VSIX
+
+Build a distributable extension package locally:
+
+```powershell
+npm run package:vsix
+```
+
+Or create a stable local filename:
+
+```powershell
+npm run package:vsix:file
+```
+
+That produces a `.vsix` you can hand to users directly.
+
+## GitHub Releases
+
+This repo includes a GitHub Actions workflow at [.github/workflows/release-vsix.yml](./.github/workflows/release-vsix.yml).
+
+To publish a downloadable `.vsix` on GitHub:
+
+1. Bump the version in [`package.json`](./package.json).
+2. Commit the version change.
+3. Create and push a tag like `v0.0.2`.
+
+Example:
+
+```powershell
+git tag v0.0.2
+git push origin v0.0.2
+```
+
+That workflow will:
+
+- install dependencies
+- compile the extension
+- package a `.vsix`
+- upload it as a workflow artifact
+- attach it to the GitHub release for that tag
+
+## Marketplace Publishing
+
+When you want one-click install from the Visual Studio Marketplace later:
+
+1. Update the `publisher` field in [`package.json`](./package.json).
+2. Create a Marketplace publisher and personal access token.
+3. Run:
+
+```powershell
+npm run publish:marketplace
+```
+
 ## CLI Resolution
 
 The language server tries these options in order:
@@ -66,7 +145,7 @@ With your current folders, the extension should also auto-detect the sibling rep
 - Diagnostics currently run from the saved file on disk via `skepac check`.
 - Cargo fallback uses its own `CARGO_TARGET_DIR` so it does not depend on the `skepa-lang/target` folder being writable.
 - If `skepac` is not installed globally yet, the cargo fallback is enough for local development.
-- Update the `publisher` field in [`package.json`](./package.json) before publishing to the Marketplace.
+- The packaged extension is for desktop VS Code, not web-only environments.
 
 ## Architecture Direction
 
