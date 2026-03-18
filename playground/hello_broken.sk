@@ -1,7 +1,0 @@
-import io;
-
-fn main() -> Int {
-  let x: Int = 1
-  io.println("this file should show a parser error");
-  return 0;
-}
