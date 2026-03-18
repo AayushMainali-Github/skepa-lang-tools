@@ -37,9 +37,10 @@ jobs:
         run: |
           VERSION=$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); const base = pkg.version.split('-')[0]; const parts = base.split('.').map(Number); const stamped = parts[0] + '.' + parts[1] + '.' + (parts[2] + 1) + '-latest.' + process.env.GITHUB_RUN_NUMBER; pkg.version = stamped; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n'); process.stdout.write(stamped);")
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "asset_name=skepa-tools-${VERSION}.vsix" >> "$GITHUB_OUTPUT"
 
       - name: Package latest VSIX
-        run: npm exec --yes @vscode/vsce -- package --out skepa-tools-latest.vsix
+        run: npm exec --yes @vscode/vsce -- package --out "${{ steps.version.outputs.asset_name }}"
 
       - name: Update latest tag
         run: |
@@ -59,8 +60,8 @@ jobs:
             Version: `${{ steps.version.outputs.version }}`
             Commit: `${{ github.sha }}`
 
-            Download `skepa-tools-latest.vsix` and install it in VS Code with:
+            Download `${{ steps.version.outputs.asset_name }}` and install it in VS Code with:
             `Extensions -> ... -> Install from VSIX...`
-          files: skepa-tools-latest.vsix
+          files: ${{ steps.version.outputs.asset_name }}
           prerelease: true
           make_latest: false
