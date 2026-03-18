@@ -31,6 +31,13 @@ jobs:
       - name: Compile extension
         run: npm run compile
 
+      - name: Stamp latest build version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); const base = pkg.version.split('-')[0]; const [major, minor, patch] = base.split('.').map(Number); const stamped = `${major}.${minor}.${patch + 1}-latest.${process.env.GITHUB_RUN_NUMBER}`; pkg.version = stamped; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n'); process.stdout.write(stamped);")
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Package latest VSIX
         run: npm exec --yes @vscode/vsce -- package --out skepa-tools-latest.vsix
 
@@ -48,6 +55,9 @@ jobs:
           name: Latest VSIX Build
           body: |
             Rolling latest build of the Skepa Tools extension from `main`.
+
+            Version: `${{ steps.version.outputs.version }}`
+            Commit: `${{ github.sha }}`
 
             Download `skepa-tools-latest.vsix` and install it in VS Code with:
             `Extensions -> ... -> Install from VSIX...`
