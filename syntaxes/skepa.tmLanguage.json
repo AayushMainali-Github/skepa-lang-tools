@@ -1,0 +1,229 @@
+{
+  "name": "Skepa",
+  "scopeName": "source.skepa",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#declarations"
+    },
+    {
+      "include": "#members"
+    },
+    {
+      "include": "#calls"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#builtins"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#operators"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.skepa",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.skepa",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.skepa",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.skepa",
+              "match": "\\\\[ntr\"\\\\]"
+            }
+          ]
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "match": "\\b(fn)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "storage.type.function.skepa"
+            },
+            "2": {
+              "name": "entity.name.function.skepa"
+            }
+          }
+        },
+        {
+          "match": "\\b(fn)\\s+[A-Za-z_][A-Za-z0-9_]*\\s*\\(([^)]*)\\)",
+          "captures": {
+            "1": {
+              "name": "storage.type.function.skepa"
+            },
+            "2": {
+              "patterns": [
+                {
+                  "match": "\\b(self)\\b",
+                  "name": "variable.parameter.skepa"
+                },
+                {
+                  "match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\b(?=\\s*:)",
+                  "name": "variable.parameter.skepa"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "match": "\\b(struct|impl)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "storage.type.skepa"
+            },
+            "2": {
+              "name": "entity.name.type.skepa"
+            }
+          }
+        },
+        {
+          "match": "\\b(let)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "storage.modifier.skepa"
+            },
+            "2": {
+              "name": "variable.other.readwrite.skepa"
+            }
+          }
+        }
+      ]
+    },
+    "members": {
+      "patterns": [
+        {
+          "match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\b(?=\\s*:)",
+          "name": "variable.other.property.skepa"
+        },
+        {
+          "match": "(?<=\\.)\\b([A-Za-z_][A-Za-z0-9_]*)\\b",
+          "name": "variable.other.property.skepa"
+        },
+        {
+          "name": "variable.language.self.skepa",
+          "match": "\\bself\\b"
+        }
+      ]
+    },
+    "calls": {
+      "patterns": [
+        {
+          "match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\b(?=\\s*\\()",
+          "name": "entity.name.function.call.skepa"
+        },
+        {
+          "match": "(?<=\\.)\\b([A-Za-z_][A-Za-z0-9_]*)\\b(?=\\s*\\()",
+          "name": "entity.name.function.method.skepa"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.skepa",
+          "match": "\\b(if|else|while|for|match|break|continue|return)\\b"
+        },
+        {
+          "name": "keyword.other.module.skepa",
+          "match": "\\b(import|from|as|export)\\b"
+        },
+        {
+          "name": "constant.language.boolean.skepa",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.skepa",
+          "match": "\\b(Int|Float|Bool|String|Void|Fn|Vec)\\b"
+        }
+      ]
+    },
+    "builtins": {
+      "patterns": [
+        {
+          "match": "\\b(io|str|arr|datetime|random|os|fs|vec)\\b\\s*(\\.)\\s*\\b(print|println|printInt|printFloat|printBool|printString|readLine|format|printf|len|contains|startsWith|endsWith|trim|toLower|toUpper|indexOf|lastIndexOf|slice|replace|repeat|isEmpty|count|first|last|join|nowUnix|nowMillis|fromUnix|fromMillis|parseUnix|year|month|day|hour|minute|second|seed|int|float|cwd|platform|sleep|execShell|execShellOut|exists|readText|writeText|appendText|mkdirAll|removeFile|removeDirAll|new|push|get|set|delete)\\b",
+          "captures": {
+            "1": {
+              "name": "support.type.builtin-package.skepa"
+            },
+            "2": {
+              "name": "punctuation.accessor.skepa"
+            },
+            "3": {
+              "name": "support.function.builtin.skepa"
+            }
+          }
+        },
+        {
+          "name": "support.type.builtin-package.skepa",
+          "match": "\\b(io|str|arr|datetime|random|os|fs|vec)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.skepa",
+          "match": "\\b\\d+(?:\\.\\d+)?\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.arrow.skepa",
+          "match": "->|=>"
+        },
+        {
+          "name": "keyword.operator.logical.skepa",
+          "match": "&&|\\|\\||!"
+        },
+        {
+          "name": "keyword.operator.comparison.skepa",
+          "match": "==|!=|<=|>=|<|>"
+        },
+        {
+          "name": "keyword.operator.assignment.skepa",
+          "match": "="
+        },
+        {
+          "name": "keyword.operator.arithmetic.skepa",
+          "match": "\\+|-|\\*|/|%"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "Function": {
+    "prefix": "fn",
+    "body": [
+      "fn ${1:name}(${2:arg}: ${3:Int}) -> ${4:Void} {",
+      "\t${5:return;}",
+      "}"
+    ],
+    "description": "Declare a function"
+  },
+  "Struct": {
+    "prefix": "struct",
+    "body": [
+      "struct ${1:Name} {",
+      "\t${2:field}: ${3:Int},",
+      "}"
+    ],
+    "description": "Declare a struct"
+  },
+  "Impl": {
+    "prefix": "impl",
+    "body": [
+      "impl ${1:Name} {",
+      "\tfn ${2:method}(self: ${1:Name}) -> ${3:Void} {",
+      "\t\t${4:return;}",
+      "\t}",
+      "}"
+    ],
+    "description": "Declare an impl block"
+  },
+  "If Else": {
+    "prefix": "if",
+    "body": [
+      "if (${1:condition}) {",
+      "\t${2}",
+      "} else {",
+      "\t${3}",
+      "}"
+    ],
+    "description": "If / else block"
+  },
+  "While": {
+    "prefix": "while",
+    "body": [
+      "while (${1:condition}) {",
+      "\t${2}",
+      "}"
+    ],
+    "description": "While loop"
+  },
+  "For": {
+    "prefix": "for",
+    "body": [
+      "for (${1:let i: Int = 0}; ${2:i < limit}; ${3:i = i + 1}) {",
+      "\t${4}",
+      "}"
+    ],
+    "description": "C-style for loop"
+  },
+  "Match": {
+    "prefix": "match",
+    "body": [
+      "match (${1:value}) {",
+      "\t${2:_} => {",
+      "\t\t${3}",
+      "\t}",
+      "}"
+    ],
+    "description": "Match statement"
+  },
+  "Import": {
+    "prefix": "import",
+    "body": [
+      "import ${1:module};"
+    ],
+    "description": "Import a module"
+  },
+  "From Import": {
+    "prefix": "from",
+    "body": [
+      "from ${1:module} import ${2:symbol};"
+    ],
+    "description": "Import selected exports"
+  },
+  "Export": {
+    "prefix": "export",
+    "body": [
+      "export { ${1:symbol} };"
+    ],
+    "description": "Export local symbols"
+  }
+}
+

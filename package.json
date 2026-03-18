@@ -1,0 +1,141 @@
+{
+  "name": "skepa-tools",
+  "displayName": "Skepa Tools",
+  "description": "VS Code support for the Skepa language.",
+  "version": "0.0.1",
+  "publisher": "skepa",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:skepa",
+    "workspaceContains:**/*.sk"
+  ],
+  "main": "./out/client/extension.js",
+  "files": [
+    "out",
+    "docs",
+    "syntaxes",
+    "snippets",
+    "language-configuration.json",
+    "README.md"
+  ],
+  "scripts": {
+    "compile": "npm run compile:client && npm run compile:server",
+    "compile:client": "tsc -p client",
+    "compile:server": "tsc -p server",
+    "watch:client": "tsc -w -p client",
+    "watch:server": "tsc -w -p server",
+    "vscode:prepublish": "npm run compile"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/vscode": "^1.95.0",
+    "typescript": "^5.8.3"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "skepa",
+        "aliases": [
+          "Skepa",
+          "skepa"
+        ],
+        "extensions": [
+          ".sk"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "skepa",
+        "scopeName": "source.skepa",
+        "path": "./syntaxes/skepa.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "skepa",
+        "path": "./snippets/skepa.json"
+      }
+    ],
+    "configuration": {
+      "title": "Skepa",
+      "properties": {
+        "skepa.cli.path": {
+          "type": "string",
+          "default": "skepac",
+          "markdownDescription": "Path to the `skepac` executable. If it is unavailable, the extension falls back to `cargo run` against a detected Skepa source repo."
+        },
+        "skepa.cli.args": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "markdownDescription": "Extra arguments passed before the `check` command when invoking `skepac`."
+        },
+        "skepa.sourceRepoPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Optional path to the local `skepa-lang` repo root. When set, diagnostics can fall back to `cargo run --manifest-path <repo>/skepac/Cargo.toml`."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[skepa]": {
+        "editor.semanticHighlighting.enabled": true
+      }
+    },
+    "semanticTokenScopes": [
+      {
+        "language": "skepa",
+        "scopes": {
+          "namespace": [
+            "entity.name.namespace.skepa",
+            "support.type.builtin-package.skepa"
+          ],
+          "type": [
+            "support.type.primitive.skepa",
+            "entity.name.type.skepa"
+          ],
+          "class": [
+            "entity.name.type.skepa",
+            "entity.name.type.class.skepa"
+          ],
+          "function": [
+            "entity.name.function.skepa",
+            "entity.name.function.call.skepa",
+            "support.function.builtin.skepa"
+          ],
+          "method": [
+            "entity.name.function.method.skepa"
+          ],
+          "property": [
+            "variable.other.property.skepa"
+          ],
+          "variable": [
+            "variable.other.readwrite.skepa"
+          ],
+          "parameter": [
+            "variable.parameter.skepa"
+          ],
+          "keyword": [
+            "keyword.control.skepa",
+            "keyword.other.module.skepa"
+          ]
+        }
+      }
+    ]
+  }
+}

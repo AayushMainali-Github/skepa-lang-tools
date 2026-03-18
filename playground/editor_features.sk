@@ -1,0 +1,29 @@
+import io;
+
+struct User {
+  id: Int,
+  name: String,
+}
+
+impl User {
+  fn bump(self, delta: Int) -> Int {
+    return self.id + delta;
+  }
+}
+
+fn makeUser(seed: Int) -> User {
+  return User { id: seed, name: "sam" };
+}
+
+fn main() -> Int {
+  let user = makeUser(9);
+  let nextId = user.bump(1);
+
+  if (nextId > 9) {
+    io.println("Skepa extension test passed");
+  } else {
+    io.println("unexpected result");
+  }
+
+  return nextId;
+}
