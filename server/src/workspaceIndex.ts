@@ -153,6 +153,11 @@ export class WorkspaceIndex {
   public buildCompletionItems(params: TextDocumentPositionParams): CompletionItem[] {
     const parsed = this.documents.get(params.textDocument.uri);
     if (parsed) {
+      const importContext = getImportContext(parsed.source, params.position);
+      if (importContext) {
+        return this.buildImportCompletionItems(parsed, importContext);
+      }
+
       const builtinAccess = getBuiltinAccessContext(parsed.source, params.position);
       if (builtinAccess) {
         const builtinMembers = getBuiltinMembers(builtinAccess.packageName);
@@ -640,6 +645,53 @@ export class WorkspaceIndex {
     return [...items.values()];
   }
 
+  private buildImportCompletionItems(
+    parsed: ParsedDocument,
+    importContext: { prefix: string; range: Range },
+  ): CompletionItem[] {
+    const items = new Map<string, CompletionItem>();
+    const prefix = importContext.prefix.toLowerCase();
+
+    for (const builtin of BUILTIN_PACKAGES) {
+      if (prefix && !builtin.label.toLowerCase().startsWith(prefix)) {
+        continue;
+      }
+
+      items.set(builtin.label, {
+        label: builtin.label,
+        kind: CompletionItemKind.Module,
+        detail: builtin.detail,
+        documentation: builtin.documentation,
+        sortText: `0-${builtin.label}`,
+        filterText: builtin.label,
+        textEdit: {
+          range: importContext.range,
+          newText: builtin.label,
+        },
+      });
+    }
+
+    for (const modulePath of this.collectWorkspaceModulePaths(parsed.uri)) {
+      if (prefix && !modulePath.toLowerCase().startsWith(prefix)) {
+        continue;
+      }
+
+      items.set(modulePath, {
+        label: modulePath,
+        kind: CompletionItemKind.Module,
+        detail: "Workspace module",
+        sortText: `1-${modulePath}`,
+        filterText: modulePath,
+        textEdit: {
+          range: importContext.range,
+          newText: modulePath,
+        },
+      });
+    }
+
+    return [...items.values()];
+  }
+
   private resolveReceiverType(parsed: ParsedDocument, position: Position, receiverName: string): string | null {
     if (getBuiltinPackage(receiverName)) {
       return receiverName;
@@ -659,6 +711,23 @@ export class WorkspaceIndex {
 
       return symbol.containerName === typeName;
     });
+  }
+
+  private collectWorkspaceModulePaths(currentUri: string): string[] {
+    const paths = new Set<string>();
+
+    for (const parsed of this.documents.values()) {
+      if (parsed.uri === currentUri) {
+        continue;
+      }
+
+      const modulePath = modulePathFromFilePath(parsed.filePath);
+      if (modulePath) {
+        paths.add(modulePath);
+      }
+    }
+
+    return [...paths].sort((a, b) => a.localeCompare(b));
   }
 
   private findReferenceRangesForSymbol(parsed: ParsedDocument, symbol: ParsedSymbol): Range[] {
@@ -1576,4 +1645,62 @@ function findBuiltinDocLocation(marker: string): Location | null {
       end: { line: lineIndex, character: lines[lineIndex].length },
     },
   };
+}
+
+function getImportContext(
+  source: string,
+  position: Position,
+): { prefix: string; range: Range } | null {
+  const lines = source.split(/\r?\n/);
+  const line = lines[position.line] ?? "";
+  const prefix = line.slice(0, position.character);
+
+  const importMatch = prefix.match(/^\s*import\s+([A-Za-z_][A-Za-z0-9_.]*)?$/);
+  if (importMatch) {
+    const value = importMatch[1] ?? "";
+    const start = prefix.length - value.length;
+    return {
+      prefix: value,
+      range: {
+        start: { line: position.line, character: start },
+        end: { line: position.line, character: position.character },
+      },
+    };
+  }
+
+  const fromMatch = prefix.match(/^\s*from\s+([A-Za-z_][A-Za-z0-9_.]*)?$/);
+  if (fromMatch) {
+    const value = fromMatch[1] ?? "";
+    const start = prefix.length - value.length;
+    return {
+      prefix: value,
+      range: {
+        start: { line: position.line, character: start },
+        end: { line: position.line, character: position.character },
+      },
+    };
+  }
+
+  return null;
+}
+
+function modulePathFromFilePath(filePath: string): string | null {
+  const normalized = filePath.replace(/\\/g, "/");
+  const withoutExt = normalized.replace(/\.sk$/i, "");
+  const parts = withoutExt.split("/").filter(Boolean);
+  const skepaIndex = parts.lastIndexOf("skepa-lang");
+  const toolsIndex = parts.lastIndexOf("skepa-lang-tools");
+  const startIndex = skepaIndex >= 0 ? skepaIndex + 1 : toolsIndex >= 0 ? toolsIndex + 1 : Math.max(parts.length - 1, 0);
+  const relevant = parts.slice(startIndex);
+
+  if (relevant.length === 0) {
+    return null;
+  }
+
+  const last = relevant[relevant.length - 1];
+  if (last === "main" || last === "mod" || last === "index") {
+    relevant.pop();
+  }
+
+  return relevant.length > 0 ? relevant.join(".") : null;
 }
