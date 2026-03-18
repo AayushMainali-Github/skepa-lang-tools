@@ -102,7 +102,8 @@
     },
     "configurationDefaults": {
       "[skepa]": {
-        "editor.semanticHighlighting.enabled": true
+        "editor.semanticHighlighting.enabled": true,
+        "editor.wordBasedSuggestions": "off"
       }
     },
     "semanticTokenScopes": [

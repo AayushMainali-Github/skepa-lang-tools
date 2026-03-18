@@ -58,6 +58,12 @@ const connection = createConnection(ProposedFeatures.all);
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 const workspaceIndex = new WorkspaceIndex();
 let workspaceFolders: string[] = [];
+const COMPLETION_TRIGGER_CHARACTERS = [
+  ".",
+  ":",
+  "_",
+  ..."abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+];
 
 connection.onInitialize((params: InitializeParams): InitializeResult => {
   workspaceFolders = (params.workspaceFolders ?? [])
@@ -68,7 +74,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Incremental,
       completionProvider: {
-        triggerCharacters: [".", ":"],
+        triggerCharacters: COMPLETION_TRIGGER_CHARACTERS,
       },
       hoverProvider: true,
       definitionProvider: true,
