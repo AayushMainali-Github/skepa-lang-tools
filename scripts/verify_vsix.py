@@ -16,10 +16,24 @@ def main() -> int:
         package = json.loads(read_text(archive, "extension/package.json"))
         server_js = read_text(archive, "extension/out/server/server/src/server.js")
         workspace_js = read_text(archive, "extension/out/server/server/src/workspaceIndex.js")
+        names = set(archive.namelist())
 
     defaults = package.get("contributes", {}).get("configurationDefaults", {}).get("[skepa]", {})
     expect(defaults.get("editor.wordBasedSuggestions") == "off", "Skepa word-based suggestions should be off in packaged extension")
     expect(defaults.get("editor.semanticHighlighting.enabled") is True, "Skepa semantic highlighting should be enabled in packaged extension")
+
+    expect(
+        "extension/node_modules/vscode-languageclient/package.json" in names,
+        "Packaged extension should include vscode-languageclient runtime dependency",
+    )
+    expect(
+        "extension/node_modules/vscode-languageserver/package.json" in names,
+        "Packaged extension should include vscode-languageserver runtime dependency",
+    )
+    expect(
+        "extension/node_modules/vscode-languageserver-textdocument/package.json" in names,
+        "Packaged extension should include vscode-languageserver-textdocument runtime dependency",
+    )
 
     expect("COMPLETION_TRIGGER_CHARACTERS" in server_js, "Packaged server should include completion trigger configuration")
     expect("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" in server_js, "Packaged server should include letter-based completion triggers")

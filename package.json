@@ -22,6 +22,7 @@
   ],
   "main": "./out/client/extension.js",
   "files": [
+    "node_modules",
     "out",
     "docs",
     "syntaxes",
