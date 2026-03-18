@@ -31,19 +31,11 @@ jobs:
       - name: Compile extension
         run: npm run compile
 
-      - name: Stamp latest build version
-        id: version
-        shell: bash
-        run: |
-          VERSION=$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); const base = pkg.version.split('-')[0]; const parts = base.split('.').map(Number); const stamped = parts[0] + '.' + parts[1] + '.' + (parts[2] + 1) + '-latest.' + process.env.GITHUB_RUN_NUMBER; pkg.version = stamped; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n'); process.stdout.write(stamped);")
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "asset_name=skepa-tools-${VERSION}.vsix" >> "$GITHUB_OUTPUT"
-
       - name: Package latest VSIX
-        run: npm exec --yes @vscode/vsce -- package --out "${{ steps.version.outputs.asset_name }}"
+        run: npm exec --yes @vscode/vsce -- package --out "skepa-tools-latest.vsix"
 
       - name: Verify packaged VSIX
-        run: python3 scripts/verify_vsix.py "${{ steps.version.outputs.asset_name }}"
+        run: python3 scripts/verify_vsix.py "skepa-tools-latest.vsix"
 
       - name: Update latest tag
         run: |
@@ -60,11 +52,10 @@ jobs:
           body: |
             Rolling latest build of the Skepa Tools extension from `main`.
 
-            Version: `${{ steps.version.outputs.version }}`
             Commit: `${{ github.sha }}`
 
-            Download `${{ steps.version.outputs.asset_name }}` and install it in VS Code with:
+            Download `skepa-tools-latest.vsix` and install it in VS Code with:
             `Extensions -> ... -> Install from VSIX...`
-          files: ${{ steps.version.outputs.asset_name }}
+          files: skepa-tools-latest.vsix
           prerelease: true
           make_latest: false
